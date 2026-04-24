@@ -1,5 +1,13 @@
 module Menu (menuPrincipal) where
 
+import OpcionesEventos
+  ( opcionTransformacion
+  , opcionAnalisisDatos
+  , opcionAnalisisTemporal
+  , opcionBusqueda
+  , opcionEstadisticas
+  )
+
 menuPrincipal :: IO ()
 menuPrincipal = do
   putStrLn "========================================="
@@ -26,19 +34,19 @@ opcionElegida :: String -> IO Bool
 opcionElegida option =
   case option of
     "1" -> do
-      putStrLn "[Pendiente] Transformacion de eventos"
+      opcionTransformacion
       return False
     "2" -> do
-      putStrLn "[Pendiente] Analisis de datos"
+      opcionAnalisisDatos
       return False
     "3" -> do
-      putStrLn "[Pendiente] Analisis temporal"
+      opcionAnalisisTemporal
       return False
     "4" -> do
-      putStrLn "[Pendiente] Busqueda por rango de fechas"
+      opcionBusqueda
       return False
     "5" -> do
-      putStrLn "[Pendiente] Estadisticas"
+      opcionEstadisticas
       return False
     "6" -> return True
     _ -> do

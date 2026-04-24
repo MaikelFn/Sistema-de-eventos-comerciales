@@ -1,2 +1,2 @@
-ghc .\Main.hs .\Menu.hs -o sistema-eventos.exe
+ghc .\Main.hs .\Menu.hs .\OpcionesEventos.hs -o sistema-eventos.exe
 .\sistema-eventos.exe
