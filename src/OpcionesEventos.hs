@@ -6,6 +6,8 @@ module OpcionesEventos
   , opcionEstadisticas
   ) where
 
+import System.Random (randomRIO)
+
 categorias :: [String]
 categorias =
     [ "Visualizacion"
@@ -18,6 +20,9 @@ categorias =
 impuestoCompra :: Double
 impuestoCompra = 0.13
 
+generarValor :: IO Double
+generarValor = randomRIO (500, 75000)
+
 
 data Evento = Evento
   { eventoId :: Int
@@ -27,7 +32,16 @@ data Evento = Evento
   }
   deriving (Eq, Show, Read)
 
-type EstadoEventos = [Evento]
+type ListaEventos = [Evento]
+
+type ListaIdsUsados = [Int]
+
+generarId :: ListaIdsUsados -> IO Int
+generarId usados = do
+  candidato <- randomRIO (0, 9000000)
+  if candidato `elem` usados
+    then generarId usados
+    else return candidato
 
 opcionTransformacion :: IO ()
 opcionTransformacion = do
