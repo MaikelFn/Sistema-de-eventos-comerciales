@@ -12,6 +12,8 @@ module OpcionesEventos
   ) where
 
 import System.Random (randomRIO)
+import Data.List     (groupBy, sortBy, nub)
+import Data.Ord      (comparing)
 
 categorias :: [String]
 categorias =
@@ -50,10 +52,11 @@ generarFecha = do
   return (show año ++ "-" ++ show mes ++ "-" ++ show dia)
 
 data Evento = Evento
-  { eventoId :: Int
-  , categoria :: String
-  , valor     :: Double
-  , fecha     :: String
+  { eventoId         :: Int
+  , categoria        :: String
+  , valor            :: Double
+  , fecha            :: String
+  , impuestoAplicado :: Bool
   } deriving (Eq, Show, Read)
 
 type ListaEventos = [Evento]
@@ -74,10 +77,11 @@ generarEvento usados = do
   nuevoValor     <- generarValor
   nuevaFecha     <- generarFecha
   return Evento
-    { eventoId = nuevoId
-    , categoria = nuevaCategoria
-    , valor     = nuevoValor
-    , fecha     = nuevaFecha
+    { eventoId         = nuevoId
+    , categoria        = nuevaCategoria
+    , valor            = nuevoValor
+    , fecha            = nuevaFecha
+    , impuestoAplicado = False  
     }
 
 -- =====================
@@ -132,15 +136,61 @@ opcionAnalisisDatos eventos = do
       putStrLn "Opcion invalida."
       opcionAnalisisDatos eventos
 
+
+eventosValidos :: [Evento] -> [Evento]
+eventosValidos = filter (\e -> valor e > 0)
+
+extraerAno :: String -> String
+extraerAno = take 4
+
 montoTotal :: [Evento] -> IO ()
 montoTotal eventos = do
-  putStrLn "[Pendiente] Monto total de todos los eventos"
-  putStrLn ("Eventos disponibles: " ++ show (length eventos))
+  let total        = sum (map valor eventos)
+      inconsistentes = filter (\e -> valor e <= 0) eventos
+  putStrLn ""
+  putStrLn "--- Monto Total ---"
+  putStrLn ("Eventos en sistema : " ++ show (length eventos))
+  putStrLn ("Monto total        : " ++ show total)
+  if null inconsistentes
+    then return ()
+    else do
+      putStrLn ""
+      putStrLn "Inconsistencias detectadas (monto <= 0):"
+      mapM_ (\e -> putStrLn ("  ID " ++ show (eventoId e) ++
+                              " | " ++ categoria e ++
+                              " | " ++ show (valor e))) inconsistentes
+
+
+promediosPorCategoriaAno :: [Evento] -> [(String, [(String, Double)])]
+promediosPorCategoriaAno eventos =
+  let validos     = eventosValidos eventos
+      cats        = nub (map categoria validos)
+      porCategoria cat =
+        let evsCat  = filter (\e -> categoria e == cat) validos
+            anos   = nub (map (extraerAno . fecha) evsCat)
+            porAno ano =
+              let evsAno = filter (\e -> extraerAno (fecha e) == ano) evsCat
+                  prom    = sum (map valor evsAno) / fromIntegral (length evsAno)
+              in (ano, prom)
+        in (cat, map porAno (sortBy compare anos))
+  in map porCategoria (sortBy compare cats)
+
 
 promedioPorCategoria :: [Evento] -> IO ()
 promedioPorCategoria eventos = do
-  putStrLn "[Pendiente] Promedio de monto por categoria por año"
-  putStrLn ("Eventos disponibles: " ++ show (length eventos))
+  putStrLn ""
+  putStrLn "--- Promedio de monto por categoria por ano ---"
+  let resultados = promediosPorCategoriaAno eventos
+  if null resultados
+    then putStrLn "No hay eventos validos para analizar."
+    else mapM_ mostrarCategoria resultados
+  where
+    mostrarCategoria (cat, anos) = do
+      putStrLn ""
+      putStrLn ("Categoria: " ++ cat)
+      mapM_ (\(ano, prom) ->
+        putStrLn ("  " ++ ano ++ ": " ++ show prom)
+        ) anos
 
 -- =====================
 -- Analisis temporal
