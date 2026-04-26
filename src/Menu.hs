@@ -1,18 +1,24 @@
 module Menu (menuPrincipal) where
 
 import OpcionesEventos
-  ( opcionTransformacion
+  ( Evento
+  , opcionTransformacion
   , opcionAnalisisDatos
   , opcionAnalisisTemporal
   , opcionBusqueda
   , opcionEstadisticas
   )
 
-menuPrincipal :: IO ()
-menuPrincipal = do
+-- Menu principal recurrente
+-- Entrada: lista de eventos actuales en memoria
+-- Salida: IO () — termina al elegir Salir
+menuPrincipal :: [Evento] -> IO ()
+menuPrincipal eventos = do
+  putStrLn ""
   putStrLn "========================================="
   putStrLn " Sistema de Eventos Comerciales"
   putStrLn "========================================="
+  putStrLn ("Eventos en sistema: " ++ show (length eventos))
   putStrLn ""
   putStrLn "Seleccione una opcion:"
   putStrLn "1) Transformacion de eventos"
@@ -23,32 +29,34 @@ menuPrincipal = do
   putStrLn "6) Salir"
   putStr "> "
 
-  option <- getLine
-  shouldExit <- opcionElegida option
+  opcion <- getLine
+  resultado <- opcionElegida opcion eventos
 
-  if shouldExit
-    then putStrLn "Finalizando sistema..."
-    else menuPrincipal
+  case resultado of
+    Nothing              -> putStrLn "Finalizando sistema..."
+    Just eventosActuales -> menuPrincipal eventosActuales
 
-opcionElegida :: String -> IO Bool
-opcionElegida option =
-  case option of
+-- Ejecuta la opcion elegida y retorna la lista de eventos sin cambios
+-- Retorna Nothing si se elige Salir
+opcionElegida :: String -> [Evento] -> IO (Maybe [Evento])
+opcionElegida opcion eventos =
+  case opcion of
     "1" -> do
-      opcionTransformacion
-      return False
+      opcionTransformacion eventos
+      return (Just eventos)
     "2" -> do
-      opcionAnalisisDatos
-      return False
+      opcionAnalisisDatos eventos
+      return (Just eventos)
     "3" -> do
-      opcionAnalisisTemporal
-      return False
+      opcionAnalisisTemporal eventos
+      return (Just eventos)
     "4" -> do
-      opcionBusqueda
-      return False
+      opcionBusqueda eventos
+      return (Just eventos)
     "5" -> do
-      opcionEstadisticas
-      return False
-    "6" -> return True
-    _ -> do
+      opcionEstadisticas eventos
+      return (Just eventos)
+    "6" -> return Nothing
+    _   -> do
       putStrLn "Opcion invalida. Intente de nuevo."
-      return False
+      return (Just eventos)

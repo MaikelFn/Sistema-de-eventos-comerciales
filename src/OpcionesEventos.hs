@@ -3,6 +3,7 @@ module OpcionesEventos
   , ListaIdsUsados
   , generarFecha
   , generarEvento
+  , eventoId
   , opcionTransformacion
   , opcionAnalisisDatos
   , opcionAnalisisTemporal
@@ -19,7 +20,7 @@ categorias =
     , "Compra"
     , "Devolucion"
     , "Seguimiento"
-  ]
+    ]
 
 impuestoCompra :: Double
 impuestoCompra = 0.13
@@ -42,19 +43,18 @@ generarDia :: IO Int
 generarDia = randomRIO (1, 31)
 
 generarFecha :: IO String
-generarFecha  = do
+generarFecha = do
   año <- generarAño
   mes <- generarMes
   dia <- generarDia
-  return (show año ++ "-" ++  show mes ++ "-" ++  show dia)
+  return (show año ++ "-" ++ show mes ++ "-" ++ show dia)
 
 data Evento = Evento
   { eventoId :: Int
   , categoria :: String
-  , valor :: Double
-  , fecha :: String
-  }
-  deriving (Eq, Show, Read)
+  , valor     :: Double
+  , fecha     :: String
+  } deriving (Eq, Show, Read)
 
 type ListaEventos = [Evento]
 
@@ -69,39 +69,38 @@ generarId usados = do
 
 generarEvento :: ListaIdsUsados -> IO Evento
 generarEvento usados = do
-  nuevoId <- generarId usados
+  nuevoId    <- generarId usados
   nuevaCategoria <- generarCategoria
   nuevoValor <- generarValor
   nuevaFecha <- generarFecha
-  return
-    Evento
-      { eventoId = nuevoId
-      , categoria = nuevaCategoria
-      , valor = nuevoValor
-      , fecha = nuevaFecha
-      }
+  return Evento
+    { eventoId = nuevoId
+    , categoria = nuevaCategoria
+    , valor     = nuevoValor
+    , fecha     = nuevaFecha
+    }
 
-opcionTransformacion :: IO ()
-opcionTransformacion = do
-  evento <- generarEvento []
-  putStrLn "Evento generado:"
-  putStrLn ("ID: " ++ show (eventoId evento))
-  putStrLn ("Categoria: " ++ categoria evento)
-  putStrLn ("Valor: " ++ show (valor evento))
-  putStrLn ("Fecha: " ++ fecha evento)
+opcionTransformacion :: [Evento] -> IO ()
+opcionTransformacion eventos = do
+  putStrLn "[Pendiente] Transformacion de eventos"
+  putStrLn ("Eventos disponibles: " ++ show (length eventos))
 
-opcionAnalisisDatos :: IO ()
-opcionAnalisisDatos = do
+opcionAnalisisDatos :: [Evento] -> IO ()
+opcionAnalisisDatos eventos = do
   putStrLn "[Pendiente] Analisis de datos"
+  putStrLn ("Eventos disponibles: " ++ show (length eventos))
 
-opcionAnalisisTemporal :: IO ()
-opcionAnalisisTemporal = do
+opcionAnalisisTemporal :: [Evento] -> IO ()
+opcionAnalisisTemporal eventos = do
   putStrLn "[Pendiente] Analisis temporal"
+  putStrLn ("Eventos disponibles: " ++ show (length eventos))
 
-opcionBusqueda :: IO ()
-opcionBusqueda = do
+opcionBusqueda :: [Evento] -> IO ()
+opcionBusqueda eventos = do
   putStrLn "[Pendiente] Busqueda por rango de fechas"
+  putStrLn ("Eventos disponibles: " ++ show (length eventos))
 
-opcionEstadisticas :: IO ()
-opcionEstadisticas = do
+opcionEstadisticas :: [Evento] -> IO ()
+opcionEstadisticas eventos = do
   putStrLn "[Pendiente] Estadisticas"
+  putStrLn ("Eventos disponibles: " ++ show (length eventos))
