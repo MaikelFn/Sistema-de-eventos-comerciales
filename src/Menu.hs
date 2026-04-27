@@ -1,7 +1,9 @@
 module Menu (menuPrincipal) where
 
 import OpcionesEventos
-  ( Evento
+  ( Evento(..)
+  , generarCantidadEventos
+  , generarNEventos
   , opcionTransformacion
   , opcionAnalisisDatos
   , opcionAnalisisTemporal
@@ -30,33 +32,45 @@ menuPrincipal eventos = do
   putStr "> "
 
   opcion <- getLine
-  resultado <- opcionElegida opcion eventos
+  (continuar, eventosActualizados) <- opcionElegida opcion eventos
 
-  case resultado of
-    Nothing              -> putStrLn "Finalizando sistema..."
-    Just eventosActuales -> menuPrincipal eventosActuales
+  if continuar
+    then menuPrincipal eventosActualizados
+    else putStrLn "Finalizando sistema..."
 
--- Ejecuta la opcion elegida y retorna la lista de eventos sin cambios
--- Retorna Nothing si se elige Salir
-opcionElegida :: String -> [Evento] -> IO (Maybe [Evento])
+-- Ejecuta la opcion elegida
+-- Retorna (continuar, lista actualizada)
+opcionElegida :: String -> [Evento] -> IO (Bool, [Evento])
 opcionElegida opcion eventos =
   case opcion of
     "1" -> do
-      opcionTransformacion eventos
-      return (Just eventos)
+      eventosActualizados <- actualizarEventosEnAcceso eventos
+      opcionTransformacion eventosActualizados
+      return (True, eventosActualizados)
     "2" -> do
-      opcionAnalisisDatos eventos
-      return (Just eventos)
+      eventosActualizados <- actualizarEventosEnAcceso eventos
+      opcionAnalisisDatos eventosActualizados
+      return (True, eventosActualizados)
     "3" -> do
-      opcionAnalisisTemporal eventos
-      return (Just eventos)
+      eventosActualizados <- actualizarEventosEnAcceso eventos
+      opcionAnalisisTemporal eventosActualizados
+      return (True, eventosActualizados)
     "4" -> do
-      opcionBusqueda eventos
-      return (Just eventos)
+      eventosActualizados <- actualizarEventosEnAcceso eventos
+      opcionBusqueda eventosActualizados
+      return (True, eventosActualizados)
     "5" -> do
-      opcionEstadisticas eventos
-      return (Just eventos)
-    "6" -> return Nothing
+      eventosActualizados <- actualizarEventosEnAcceso eventos
+      opcionEstadisticas eventosActualizados
+      return (True, eventosActualizados)
+    "6" -> return (False, eventos)
     _   -> do
       putStrLn "Opcion invalida. Intente de nuevo."
-      return (Just eventos)
+      return (True, eventos)
+
+actualizarEventosEnAcceso :: [Evento] -> IO [Evento]
+actualizarEventosEnAcceso eventos = do
+  cantidadNuevos <- generarCantidadEventos
+  let idsUsados = map eventoId eventos
+  nuevosEventos <- generarNEventos cantidadNuevos idsUsados
+  return (eventos ++ nuevosEventos)
