@@ -29,7 +29,7 @@ categorias =
     ]
 
 impuestoCompra :: Double
-impuestoCompra = 0.13
+impuestoCompra = 1.13
 
 -- =====================
 -- Generadores
@@ -133,11 +133,70 @@ sumasPorCategoriaYAño eventos =
 imprimirSumaCategoriaYAño :: (String, Int, Double) -> IO ()
 imprimirSumaCategoriaYAño (categoriaActual, añoActual, sumaActual) =
   putStrLn (categoriaActual ++ " " ++ show añoActual ++ ": " ++ show sumaActual)
+
+sumarCategoria :: [Evento] -> String -> Double
+sumarCategoria eventos categoriaBuscada =
+  sum
+    [ valor evento
+    | evento <- eventos
+    , categoria evento == categoriaBuscada
+    ]
+
+contarCategoria :: [Evento] -> String -> Int
+contarCategoria eventos categoriaBuscada =
+  length
+    [ evento
+    | evento <- eventos
+    , categoria evento == categoriaBuscada
+    ]
+
+promedioCategoria :: [Evento] -> String -> (String, Double)
+promedioCategoria eventos categoriaBuscada =
+  let sumaTotal = sumarCategoria eventos categoriaBuscada
+      cantidad  = contarCategoria eventos categoriaBuscada
+      promedio  = sumaTotal / fromIntegral cantidad
+  in (categoriaBuscada, promedio)
+
+promediosPorCategoria :: [Evento] -> [(String, Double)]
+promediosPorCategoria eventos =
+  [ promedioCategoria eventos categoriaActual
+  | categoriaActual <- categorias
+  ]
+
+asignarAltoValor :: [Evento] -> [(String, Double)] -> [Evento]
+asignarAltoValor eventos promedios =
+  [ evento { esAltoValor = valor evento > promedio }
+  | (cat, promedio) <- promedios
+  , evento <- eventos
+  , categoria evento == cat
+  ]
+
+aplicarImpuestoEventos :: [Evento] -> [Evento]
+aplicarImpuestoEventos eventos =
+  [ if categoria evento == "Compra" && not (impuestoAplicado evento)
+      then evento
+        { valor = valor evento * impuestoCompra
+        , impuestoAplicado = True
+        }
+      else evento
+  | evento <- eventos
+  ]
+
+imprimirComprasConImpuesto :: [Evento] -> IO ()
+imprimirComprasConImpuesto eventos = do
+  putStrLn "--- Eventos de compra con impuesto aplicado ---"
+  mapM_ print [ evento | evento <- eventos, impuestoAplicado evento ]
+
+
+imprimirAltosValores :: [Evento] -> IO ()
+imprimirAltosValores eventos = do
+  putStrLn "--- Eventos de alto valor ---"
+  mapM_ print [ evento | evento <- eventos, esAltoValor evento ]
 -- =====================
 -- Transformacion de eventos
 -- =====================
 
-opcionTransformacion :: [Evento] -> IO ()
+opcionTransformacion :: [Evento] -> IO [Evento]
 opcionTransformacion eventos = do
   putStrLn ""
   putStrLn "--- Transformacion de eventos ---"
@@ -149,21 +208,23 @@ opcionTransformacion eventos = do
   case opcion of
     "1" -> aplicarImpuesto eventos
     "2" -> etiquetarAltoValor eventos
-    "3" -> return ()
+    "3" -> return eventos
     _   -> do
       putStrLn "Opcion invalida."
       opcionTransformacion eventos
 
-aplicarImpuesto :: [Evento] -> IO ()
+aplicarImpuesto :: [Evento] -> IO [Evento]
 aplicarImpuesto eventos = do
-  putStrLn "[Pendiente] Aplicar impuesto del 13% a compras"
-  putStrLn ("Eventos disponibles: " ++ show (length eventos))
+  let eventosActualizados = aplicarImpuestoEventos eventos
+  imprimirComprasConImpuesto eventosActualizados
+  return eventosActualizados
 
-etiquetarAltoValor :: [Evento] -> IO ()
+etiquetarAltoValor :: [Evento] -> IO [Evento]
 etiquetarAltoValor eventos = do
-  putStrLn "[Pendiente] Etiquetar eventos de alto valor"
-  putStrLn ("Eventos disponibles: " ++ show (length eventos))
-
+  let promedios = promediosPorCategoria eventos
+  let eventosActualizados = asignarAltoValor eventos promedios
+  imprimirAltosValores eventosActualizados
+  return eventosActualizados 
 -- =====================
 -- Analisis de datos
 -- =====================

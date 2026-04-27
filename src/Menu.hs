@@ -45,26 +45,32 @@ opcionElegida opcion eventos =
   case opcion of
     "1" -> do
       eventosActualizados <- actualizarEventosEnAcceso eventos
-      opcionTransformacion eventosActualizados
-      return (True, eventosActualizados)
+      nuevosEventos <- opcionTransformacion eventosActualizados
+      return (True, nuevosEventos)
+
     "2" -> do
       eventosActualizados <- actualizarEventosEnAcceso eventos
       opcionAnalisisDatos eventosActualizados
       return (True, eventosActualizados)
+
     "3" -> do
       eventosActualizados <- actualizarEventosEnAcceso eventos
       opcionAnalisisTemporal eventosActualizados
       return (True, eventosActualizados)
+
     "4" -> do
       eventosActualizados <- actualizarEventosEnAcceso eventos
       opcionBusqueda eventosActualizados
       return (True, eventosActualizados)
+
     "5" -> do
       eventosActualizados <- actualizarEventosEnAcceso eventos
       opcionEstadisticas eventosActualizados
       return (True, eventosActualizados)
+
     "6" -> return (False, eventos)
-    _   -> do
+
+    _ -> do
       putStrLn "Opcion invalida. Intente de nuevo."
       return (True, eventos)
 
