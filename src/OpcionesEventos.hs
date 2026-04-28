@@ -16,10 +16,6 @@ module OpcionesEventos
 import System.Random (randomRIO)
 import Data.List (nub, sortOn)
 
--- =====================
--- Datos base
--- =====================
-
 categorias :: [String]
 categorias =
     [ "Visualizacion"
@@ -31,10 +27,6 @@ categorias =
 
 impuestoCompra :: Double
 impuestoCompra = 1.13
-
--- =====================
--- Generadores
--- =====================
 
 generarValor :: IO Double
 generarValor = randomRIO (500, 75000)
@@ -56,18 +48,25 @@ generarDia = randomRIO (1, 31)
 generarCantidadEventos :: IO Int
 generarCantidadEventos = randomRIO (10, 15)
 
-generarFecha :: IO String
+generarFecha :: IO Integer
 generarFecha = do
   año <- generarAño
   mes <- generarMes
   dia <- generarDia
-  return (show año ++ "-" ++ show mes ++ "-" ++ show dia)
+  return (fromIntegral (año * 10000 + mes * 100 + dia))
+
+formatearFecha :: Integer -> String
+formatearFecha timestamp =
+  let año = timestamp `div` 10000
+      mes = (timestamp `div` 100) `mod` 100
+      dia = timestamp `mod` 100
+  in show año ++ "-" ++ show mes ++ "-" ++ show dia
 
 data Evento = Evento
   { eventoId :: Int
   , categoria :: String
   , valor     :: Double
-  , fecha     :: String
+  , fecha     :: Integer
   , esAltoValor :: Bool
   , impuestoAplicado :: Bool
   } deriving (Eq, Show, Read)
@@ -88,12 +87,12 @@ generarEvento usados = do
   nuevoId        <- generarId usados
   nuevaCategoria <- generarCategoria
   nuevoValor     <- generarValor
-  nuevaFecha     <- generarFecha
+  timestampFecha <- generarFecha
   return Evento
     { eventoId = nuevoId
     , categoria = nuevaCategoria
     , valor     = nuevoValor
-    , fecha     = nuevaFecha
+    , fecha     = timestampFecha
     , esAltoValor = False
     , impuestoAplicado = False
     }
@@ -107,10 +106,43 @@ generarNEventos cantidad usados = do
 
 
 extraerAño :: Evento -> Int
-extraerAño evento = extraerAñoDeFecha (fecha evento)
+extraerAño evento =
+  let (año, mes, dia) = parseFecha (formatearFecha (fecha evento))
+  in año
 
-extraerAñoDeFecha :: String -> Int
-extraerAñoDeFecha fecha = read (take 4 fecha)
+extraerMes :: Evento -> Int
+extraerMes evento =
+  let (año, mes, dia) = parseFecha (formatearFecha (fecha evento))
+  in mes
+
+extraerDia :: Evento -> Int
+extraerDia evento =
+  let (año, mes, dia) = parseFecha (formatearFecha (fecha evento))
+  in dia
+
+split :: String -> [String]
+split "" = [""]
+split (x:xs)
+  | x == '-' = "" : resto
+  | otherwise = (x : head resto) : tail resto
+  where
+    resto = split xs
+parseFecha :: String -> (Int, Int, Int)
+parseFecha fecha =
+  let [añoStr, mesStr, diaStr] = split fecha
+  in (read añoStr, read mesStr, read diaStr)
+eventosAFechaTupla :: [Evento] -> [(Evento, (Int, Int, Int))]
+eventosAFechaTupla eventos = [ (evento, parseFecha (formatearFecha (fecha evento))) | evento <- eventos ]
+
+ordenarEventosPorFecha :: [(Evento, (Int, Int, Int))] -> [(Evento, (Int, Int, Int))]
+ordenarEventosPorFecha = sortOn snd
+
+eventoMasAntiguoYReciente :: [(Evento, (Int, Int, Int))] -> (Evento, Evento)
+eventoMasAntiguoYReciente eventosConFecha =
+  let eventosOrdenados = ordenarEventosPorFecha eventosConFecha
+      (eventoMasAntiguo, fechaAntigua) = head eventosOrdenados
+      (eventoMasReciente, fechaReciente) = last eventosOrdenados
+  in (eventoMasAntiguo, eventoMasReciente)
 
 añosAnalisis :: [Int]
 añosAnalisis = [2026, 2027, 2028]
@@ -164,49 +196,40 @@ promediosPorCategoria eventos =
   | categoriaActual <- categorias
   ]
 
--- =====================
--- Estadisticas: cantidad por categoria
--- =====================
-
 cantidadEventosPorCategoria :: [Evento] -> [(String, Int)]
 cantidadEventosPorCategoria eventos =
-  [ (cat, length [ evento | evento <- eventos, categoria evento == cat ])
-  | cat <- categorias
+  [ (categoriaActual, length [ evento | evento <- eventos, categoria evento == categoriaActual ])
+  | categoriaActual <- categorias
   ]
-
 imprimirCantidadEvento :: (String, Int) -> IO ()
-imprimirCantidadEvento (categoriaStr, numero) =
-  putStrLn (categoriaStr ++ ": " ++ show numero)
-
--- Obtener evento con monto maximo y minimo (asume lista no vacia)
+imprimirCantidadEvento (categoriaNombre, cantidad) =
+  putStrLn (categoriaNombre ++ ": " ++ show cantidad)
 eventoMaxMin :: [Evento] -> (Evento, Evento)
 eventoMaxMin eventos =
   let eventosOrdenados = sortOn valor eventos
-      minimo = head eventosOrdenados
-      maximo = last eventosOrdenados
-  in (maximo, minimo)
-
--- Imprime un evento en formato legible
+      eventoMinimo = head eventosOrdenados
+      eventoMaximo = last eventosOrdenados
+  in (eventoMaximo, eventoMinimo)
 imprimirEvento :: Evento -> IO ()
 imprimirEvento evento = putStrLn $
   "ID: " ++ show (eventoId evento) ++ " | Categoria: " ++ categoria evento ++
-  " | Valor: " ++ show (valor evento) ++ " | Fecha: " ++ fecha evento
+  " | Valor: " ++ show (valor evento) ++ " | Fecha: " ++ formatearFecha (fecha evento)
 
 imprimirMaxMinEventos :: [Evento] -> IO ()
 imprimirMaxMinEventos eventos =
-  let (maxE, minE) = eventoMaxMin eventos
+  let (eventoMaximo, eventoMinimo) = eventoMaxMin eventos
   in do
     putStrLn "--- Evento con monto maximo ---"
-    imprimirEvento maxE
+    imprimirEvento eventoMaximo
     putStrLn "--- Evento con monto minimo ---"
-    imprimirEvento minE
+    imprimirEvento eventoMinimo
 
 asignarAltoValor :: [Evento] -> [(String, Double)] -> [Evento]
 asignarAltoValor eventos promedios =
   [ evento { esAltoValor = valor evento > promedio }
-  | (cat, promedio) <- promedios
+  | (categoriaActual, promedio) <- promedios
   , evento <- eventos
-  , categoria evento == cat
+  , categoria evento == categoriaActual
   ]
 
 aplicarImpuestoEventos :: [Evento] -> [Evento]
@@ -230,9 +253,6 @@ imprimirAltosValores :: [Evento] -> IO ()
 imprimirAltosValores eventos = do
   putStrLn "--- Eventos de alto valor ---"
   mapM_ print [ evento | evento <- eventos, esAltoValor evento ]
--- =====================
--- Transformacion de eventos
--- =====================
 
 opcionTransformacion :: [Evento] -> IO [Evento]
 opcionTransformacion eventos = do
@@ -263,9 +283,6 @@ etiquetarAltoValor eventos = do
   let eventosActualizados = asignarAltoValor eventos promedios
   imprimirAltosValores eventosActualizados
   return eventosActualizados 
--- =====================
--- Analisis de datos
--- =====================
 
 opcionAnalisisDatos :: [Evento] -> IO ()
 opcionAnalisisDatos eventos = do
@@ -298,10 +315,6 @@ promedioPorCategoria eventos = do
   putStrLn "--- Suma de montos por categoria y año ---"
   mapM_ imprimirSumaCategoriaYAño resultados
 
--- =====================
--- Analisis temporal
--- =====================
-
 opcionAnalisisTemporal :: [Evento] -> IO ()
 opcionAnalisisTemporal eventos = do
   putStrLn ""
@@ -325,43 +338,37 @@ mesMayorMonto :: [Evento] -> IO ()
 mesMayorMonto eventos = do
   putStrLn "[Pendiente] Mes con mayor monto y dia mas activo"
   putStrLn ("Eventos disponibles: " ++ show (length eventos))
-
 eventoAntiguoReciente :: [Evento] -> IO ()
 eventoAntiguoReciente eventos = do
-  putStrLn "[Pendiente] Evento mas antiguo y mas reciente"
-  putStrLn ("Eventos disponibles: " ++ show (length eventos))
+  let eventosConFecha = eventosAFechaTupla eventos
+      (eventoMasAntiguo, eventoMasReciente) = eventoMasAntiguoYReciente eventosConFecha
+  putStrLn "--- Evento mas antiguo ---"
+  imprimirEvento eventoMasAntiguo
+  putStrLn "--- Evento mas reciente ---"
+  imprimirEvento eventoMasReciente
 
 fechaConMasEventos :: [Evento] -> (String, Int)
 fechaConMasEventos eventos =
-  let fechasRegistradas = map fecha eventos
+  let fechasRegistradas = map (formatearFecha . fecha) eventos
       fechasSinRepetir = nub fechasRegistradas
       conteosPorFecha =
         [ (fechaActual
         , length [eventoActual
         | eventoActual <- eventos
-        , fecha eventoActual == fechaActual])
+        , formatearFecha (fecha eventoActual) == fechaActual])
         | fechaActual <- fechasSinRepetir
         ]
       conteosOrdenados = sortOn snd conteosPorFecha
   in last conteosOrdenados
-
 resumenPorIntervalo :: [Evento] -> IO ()
 resumenPorIntervalo eventos = do
   putStrLn "[Pendiente] Resumen de montos por intervalo"
   putStrLn ("Eventos disponibles: " ++ show (length eventos))
 
--- =====================
--- Busqueda
--- =====================
-
 opcionBusqueda :: [Evento] -> IO ()
 opcionBusqueda eventos = do
   putStrLn "[Pendiente] Busqueda por rango de fechas"
   putStrLn ("Eventos disponibles: " ++ show (length eventos))
-
--- =====================
--- Estadisticas
--- =====================
 
 opcionEstadisticas :: [Evento] -> IO ()
 opcionEstadisticas eventos = do
