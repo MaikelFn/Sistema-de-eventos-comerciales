@@ -14,6 +14,7 @@ module OpcionesEventos
   ) where
 
 import System.Random (randomRIO)
+import Data.List (nub, sortOn)
 
 -- =====================
 -- Datos base
@@ -163,6 +164,43 @@ promediosPorCategoria eventos =
   | categoriaActual <- categorias
   ]
 
+-- =====================
+-- Estadisticas: cantidad por categoria
+-- =====================
+
+cantidadEventosPorCategoria :: [Evento] -> [(String, Int)]
+cantidadEventosPorCategoria eventos =
+  [ (cat, length [ evento | evento <- eventos, categoria evento == cat ])
+  | cat <- categorias
+  ]
+
+imprimirCantidadEvento :: (String, Int) -> IO ()
+imprimirCantidadEvento (categoriaStr, numero) =
+  putStrLn (categoriaStr ++ ": " ++ show numero)
+
+-- Obtener evento con monto maximo y minimo (asume lista no vacia)
+eventoMaxMin :: [Evento] -> (Evento, Evento)
+eventoMaxMin eventos =
+  let eventosOrdenados = sortOn valor eventos
+      minimo = head eventosOrdenados
+      maximo = last eventosOrdenados
+  in (maximo, minimo)
+
+-- Imprime un evento en formato legible
+imprimirEvento :: Evento -> IO ()
+imprimirEvento evento = putStrLn $
+  "ID: " ++ show (eventoId evento) ++ " | Categoria: " ++ categoria evento ++
+  " | Valor: " ++ show (valor evento) ++ " | Fecha: " ++ fecha evento
+
+imprimirMaxMinEventos :: [Evento] -> IO ()
+imprimirMaxMinEventos eventos =
+  let (maxE, minE) = eventoMaxMin eventos
+  in do
+    putStrLn "--- Evento con monto maximo ---"
+    imprimirEvento maxE
+    putStrLn "--- Evento con monto minimo ---"
+    imprimirEvento minE
+
 asignarAltoValor :: [Evento] -> [(String, Double)] -> [Evento]
 asignarAltoValor eventos promedios =
   [ evento { esAltoValor = valor evento > promedio }
@@ -293,6 +331,20 @@ eventoAntiguoReciente eventos = do
   putStrLn "[Pendiente] Evento mas antiguo y mas reciente"
   putStrLn ("Eventos disponibles: " ++ show (length eventos))
 
+fechaConMasEventos :: [Evento] -> (String, Int)
+fechaConMasEventos eventos =
+  let fechasRegistradas = map fecha eventos
+      fechasSinRepetir = nub fechasRegistradas
+      conteosPorFecha =
+        [ (fechaActual
+        , length [eventoActual
+        | eventoActual <- eventos
+        , fecha eventoActual == fechaActual])
+        | fechaActual <- fechasSinRepetir
+        ]
+      conteosOrdenados = sortOn snd conteosPorFecha
+  in last conteosOrdenados
+
 resumenPorIntervalo :: [Evento] -> IO ()
 resumenPorIntervalo eventos = do
   putStrLn "[Pendiente] Resumen de montos por intervalo"
@@ -315,15 +367,13 @@ opcionEstadisticas :: [Evento] -> IO ()
 opcionEstadisticas eventos = do
   putStrLn ""
   putStrLn "--- Estadisticas ---"
-  putStrLn "A) Resumen general"
-  putStrLn "B) Volver"
+  putStrLn "1) Resumen general"
+  putStrLn "2) Volver"
   putStr "> "
   opcion <- getLine
   case opcion of
-    "A" -> resumenGeneral eventos
-    "a" -> resumenGeneral eventos
-    "B" -> return ()
-    "b" -> return ()
+    "1" -> resumenGeneral eventos
+    "2" -> return ()
     _   -> do
       putStrLn "Opcion invalida."
       opcionEstadisticas eventos
@@ -332,10 +382,14 @@ resumenGeneral :: [Evento] -> IO ()
 resumenGeneral eventos = do
   putStrLn ""
   putStrLn "--- Resumen general ---"
-  putStrLn "[Pendiente] Cantidad de eventos por categoria"
-  putStrLn "[Pendiente] Evento con monto mas alto y mas bajo"
-  putStrLn "[Pendiente] Dia con mayor cantidad de eventos"
-  putStrLn ("Eventos disponibles: " ++ show (length eventos))
+  let conteos = cantidadEventosPorCategoria eventos
+      (fechaMayorActividad, cantidadMayorActividad) = fechaConMasEventos eventos
+  putStrLn "--- Cantidad de eventos por categoria ---"
+  mapM_ imprimirCantidadEvento conteos
+  imprimirMaxMinEventos eventos
+  putStrLn "--- Dia con mayor cantidad de eventos ---"
+  putStrLn ("Fecha: " ++ fechaMayorActividad)
+  putStrLn ("Cantidad de eventos: " ++ show cantidadMayorActividad)
   putStrLn ""
   putStrLn "Exportar reporte:"
   putStrLn "1) CSV"
