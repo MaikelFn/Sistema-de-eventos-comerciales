@@ -1,2 +1,2 @@
-ghc .\Main.hs .\Menu.hs .\OpcionesEventos.hs -o sistema-eventos.exe
-.\sistema-eventos.exe
+ghc -package time Main.hs -o sistema-eventos
+sistema-eventos.exe
