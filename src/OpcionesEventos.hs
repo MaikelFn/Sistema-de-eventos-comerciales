@@ -15,6 +15,14 @@ module OpcionesEventos
 
 import System.Random (randomRIO)
 import Data.List (nub, sortOn)
+import Data.Time.Calendar (toGregorian, Day)
+import Data.Time.Clock (addUTCTime, getCurrentTime, utctDay)
+
+añosAnalisis :: IO [Int]
+añosAnalisis = do
+  hoy <- getCurrentTime
+  let (año, mes, dia) = toGregorian (utctDay hoy)
+  return [fromInteger año .. fromInteger año + 2]
 
 categorias :: [String]
 categorias =
@@ -36,24 +44,21 @@ generarCategoria = do
   indice <- randomRIO (0, length categorias - 1)
   return (categorias !! indice)
 
-generarAño :: IO Int
-generarAño = randomRIO (2026, 2028)
-
-generarMes :: IO Int
-generarMes = randomRIO (1, 12)
-
-generarDia :: IO Int
-generarDia = randomRIO (1, 31)
-
 generarCantidadEventos :: IO Int
 generarCantidadEventos = randomRIO (10, 15)
 
 generarFecha :: IO Integer
 generarFecha = do
-  año <- generarAño
-  mes <- generarMes
-  dia <- generarDia
-  return (fromIntegral (año * 10000 + mes * 100 + dia))
+  ahora <- getCurrentTime
+  let dosañosEnSegundos = 63072000 :: Integer
+  segundosExtra <- randomRIO (0, dosañosEnSegundos)
+  let fechaAleatoria = addUTCTime (fromIntegral segundosExtra) ahora
+  return (formatearDia (utctDay fechaAleatoria))
+
+formatearDia :: Day -> Integer
+formatearDia dia =
+  let (año, mes, diaMes) = toGregorian dia
+  in año * 10000 + fromIntegral mes * 100 + fromIntegral diaMes
 
 formatearFecha :: Integer -> String
 formatearFecha timestamp =
@@ -144,9 +149,6 @@ eventoMasAntiguoYReciente eventosConFecha =
       (eventoMasReciente, fechaReciente) = last eventosOrdenados
   in (eventoMasAntiguo, eventoMasReciente)
 
-añosAnalisis :: [Int]
-añosAnalisis = [2026, 2027, 2028]
-
 sumarCategoriaPorAño :: [Evento] -> String -> Int -> Double
 sumarCategoriaPorAño eventos categoriaBuscada añoBuscado =
   sum
@@ -156,12 +158,14 @@ sumarCategoriaPorAño eventos categoriaBuscada añoBuscado =
     , extraerAño evento == añoBuscado
     ]
 
-sumasPorCategoriaYAño :: [Evento] -> [(String, Int, Double)]
-sumasPorCategoriaYAño eventos =
-  [ (categoriaActual, añoActual, sumarCategoriaPorAño eventos categoriaActual añoActual)
-  | añoActual <- añosAnalisis
-  , categoriaActual <- categorias
-  ]
+sumasPorCategoriaYAño :: [Evento] -> IO [(String, Int, Double)]
+sumasPorCategoriaYAño eventos = do
+  años <- añosAnalisis
+  return
+    [ (categoriaActual, añoActual, sumarCategoriaPorAño eventos categoriaActual añoActual)
+    | añoActual <- años
+    , categoriaActual <- categorias
+    ]
 
 imprimirSumaCategoriaYAño :: (String, Int, Double) -> IO ()
 imprimirSumaCategoriaYAño (categoriaActual, añoActual, sumaActual) =
@@ -311,7 +315,7 @@ montoTotal eventos = do
 
 promedioPorCategoria :: [Evento] -> IO ()
 promedioPorCategoria eventos = do
-  let resultados = sumasPorCategoriaYAño eventos
+  resultados <- sumasPorCategoriaYAño eventos
   putStrLn "--- Suma de montos por categoria y año ---"
   mapM_ imprimirSumaCategoriaYAño resultados
 
