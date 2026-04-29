@@ -338,10 +338,72 @@ opcionAnalisisTemporal eventos = do
       putStrLn "Opcion invalida."
       opcionAnalisisTemporal eventos
 
+diaDeSemana :: Int -> Int -> Int -> Int
+diaDeSemana año mes dia =
+  let t = [0, 3, 2, 5, 0, 3, 5, 1, 4, 6, 2, 4]
+      a = if mes < 3 then año - 1 else año
+  in (a + a `div` 4 - a `div` 100 + a `div` 400 + (t !! (mes - 1)) + dia) `mod` 7
+
+nombreDiaSemana :: Int -> String
+nombreDiaSemana 0 = "Domingo"
+nombreDiaSemana 1 = "Lunes"
+nombreDiaSemana 2 = "Martes"
+nombreDiaSemana 3 = "Miercoles"
+nombreDiaSemana 4 = "Jueves"
+nombreDiaSemana 5 = "Viernes"
+nombreDiaSemana 6 = "Sabado"
+nombreDiaSemana _ = "Desconocido"
+
+extraerDiaSemana :: Evento -> Int
+extraerDiaSemana evento =
+  let (año, mes, dia) = parseFecha (formatearFecha (fecha evento))
+  in diaDeSemana año mes dia
+
+sumarMes :: [Evento] -> Int -> Double
+sumarMes eventos mesBuscado =
+  sum
+    [ valor evento
+    | evento <- eventos
+    , extraerMes evento == mesBuscado
+    ]
+
+montosPorMes :: [Evento] -> [(Int, Double)]
+montosPorMes eventos =
+  [ (mesActual, sumarMes eventos mesActual)
+  | mesActual <- [1..12]
+  ]
+
+contarDiaSemana :: [Evento] -> Int -> Int
+contarDiaSemana eventos diaBuscado =
+  length
+    [ evento
+    | evento <- eventos
+    , extraerDiaSemana evento == diaBuscado
+    ]
+
+conteosPorDiaSemana :: [Evento] -> [(Int, Int)]
+conteosPorDiaSemana eventos =
+  [ (diaActual, contarDiaSemana eventos diaActual)
+  | diaActual <- [0..6]
+  ]
+
 mesMayorMonto :: [Evento] -> IO ()
 mesMayorMonto eventos = do
-  putStrLn "[Pendiente] Mes con mayor monto y dia mas activo"
-  putStrLn ("Eventos disponibles: " ++ show (length eventos))
+  let montos          = montosPorMes eventos
+      montosOrdenados = sortOn snd montos
+      (mesMayor, montoMayor) = last montosOrdenados
+
+      conteos          = conteosPorDiaSemana eventos
+      conteosOrdenados = sortOn snd conteos
+      (diaMayor, cantidadMayor) = last conteosOrdenados
+
+  putStrLn "--- Mes con mayor monto total ---"
+  putStrLn ("Mes: " ++ show mesMayor)
+  putStrLn ("Monto acumulado: " ++ show montoMayor)
+  putStrLn ""
+  putStrLn "--- Dia de la semana mas activo ---"
+  putStrLn ("Dia: " ++ nombreDiaSemana diaMayor)
+  putStrLn ("Cantidad de eventos: " ++ show cantidadMayor)
 eventoAntiguoReciente :: [Evento] -> IO ()
 eventoAntiguoReciente eventos = do
   let eventosConFecha = eventosAFechaTupla eventos
