@@ -15,7 +15,7 @@ module OpcionesEventos
 
 import System.Random (randomRIO)
 import Data.List (nub, sortOn)
-import Data.Time.Calendar (toGregorian, Day)
+import Data.Time.Calendar (toGregorian, Day, addDays)
 import Data.Time.Clock (addUTCTime, getCurrentTime, utctDay)
 
 añosAnalisis :: IO [Int]
@@ -136,6 +136,61 @@ parseFecha :: String -> (Int, Int, Int)
 parseFecha fecha =
   let [añoStr, mesStr, diaStr] = split fecha
   in (read añoStr, read mesStr, read diaStr)
+
+type FechaDesglosada = (Int, Int, Int)
+
+intervalosDeNDiasDesdeHoy :: Int -> IO [(Day, Day)]
+intervalosDeNDiasDesdeHoy n = do
+  ahora <- getCurrentTime
+  let dosañosEnSegundos = 63072000 :: Integer
+      fechaMaxima = utctDay (addUTCTime (fromIntegral dosañosEnSegundos) ahora)
+      hoy = utctDay ahora
+      paso = max 1 n
+      construirIntervalos inicio
+        | inicio > fechaMaxima = []
+        | otherwise =
+            let final = min (addDays (fromIntegral (paso - 1)) inicio) fechaMaxima
+            in (inicio, final) : construirIntervalos (addDays (fromIntegral paso) inicio)
+  return (construirIntervalos hoy)
+
+eventosPorIntervalos :: [Evento] -> Int -> [(Evento, FechaDesglosada)]
+eventosPorIntervalos eventos _intervalo =
+  let tuplas =
+        [ (evento, parseFecha (formatearFecha (fecha evento)))
+        | evento <- eventos
+        ]
+      ordenadas = sortOn snd tuplas
+  in ordenadas
+
+diaAFechaDesglosada :: Day -> FechaDesglosada
+diaAFechaDesglosada dia =
+  let (año, mes, diaMes) = toGregorian dia
+  in (fromInteger año, mes, diaMes)
+
+estaEnIntervalo :: FechaDesglosada -> (Day, Day) -> Bool
+estaEnIntervalo fecha (inicio, fin) =
+  let inicioDesglosado = diaAFechaDesglosada inicio
+      finDesglosado = diaAFechaDesglosada fin
+  in fecha >= inicioDesglosado && fecha <= finDesglosado
+
+eventosDentroDeIntervalo :: (Day, Day) -> [(Evento, FechaDesglosada)] -> [(Evento, FechaDesglosada)]
+eventosDentroDeIntervalo intervalo eventosConFecha =
+  [ eventoConFecha
+  | eventoConFecha@(evento, fechaEvento) <- eventosConFecha
+  , estaEnIntervalo fechaEvento intervalo
+  ]
+
+eventosAgrupadosPorIntervalo :: [(Day, Day)] -> [(Evento, FechaDesglosada)] -> [((Day, Day), [(Evento, FechaDesglosada)])]
+eventosAgrupadosPorIntervalo intervalos eventosConFecha =
+  [ (intervalo, eventosDentroDeIntervalo intervalo eventosConFecha)
+  | intervalo <- intervalos
+  ]
+
+imprimirIntervaloAgrupado :: ((Day, Day), [(Evento, FechaDesglosada)]) -> IO ()
+imprimirIntervaloAgrupado ((inicio, fin), eventosDelIntervalo) = do
+  putStrLn ("Intervalo: " ++ show inicio ++ " a " ++ show fin)
+  putStrLn ("Eventos en el intervalo: " ++ show (length eventosDelIntervalo))
+
 eventosAFechaTupla :: [Evento] -> [(Evento, (Int, Int, Int))]
 eventosAFechaTupla eventos = [ (evento, parseFecha (formatearFecha (fecha evento))) | evento <- eventos ]
 
@@ -428,8 +483,16 @@ fechaConMasEventos eventos =
   in last conteosOrdenados
 resumenPorIntervalo :: [Evento] -> IO ()
 resumenPorIntervalo eventos = do
-  putStrLn "[Pendiente] Resumen de montos por intervalo"
-  putStrLn ("Eventos disponibles: " ++ show (length eventos))
+  putStrLn "--- Resumen de montos por intervalo ---"
+  putStrLn "Ingrese la cantidad de dias por intervalo (ej: 50):"
+  entrada <- getLine
+  let n = read entrada :: Int
+  intervalos <- intervalosDeNDiasDesdeHoy n
+  let eventosConFecha = eventosPorIntervalos eventos n
+      agrupados = eventosAgrupadosPorIntervalo intervalos eventosConFecha
+  putStrLn ("Intervalo aceptado: " ++ show n ++ " dias")
+  putStrLn ("Cantidad de intervalos generados: " ++ show (length intervalos))
+  mapM_ imprimirIntervaloAgrupado agrupados
 
 opcionBusqueda :: [Evento] -> IO ()
 opcionBusqueda eventos = do
