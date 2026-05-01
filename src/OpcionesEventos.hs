@@ -189,8 +189,11 @@ eventosAgrupadosPorIntervalo intervalos eventosConFecha =
 
 imprimirIntervaloAgrupado :: ((Day, Day), [(Evento, FechaDesglosada)]) -> IO ()
 imprimirIntervaloAgrupado ((inicio, fin), eventosDelIntervalo) = do
+  let cantidad = length eventosDelIntervalo
+      montoTotal = sum [ valor e | (e, _) <- eventosDelIntervalo ]
   putStrLn ("Intervalo: " ++ show inicio ++ " a " ++ show fin)
-  putStrLn ("Eventos en el intervalo: " ++ show (length eventosDelIntervalo))
+  putStrLn ("Cantidad de eventos: " ++ show cantidad)
+  putStrLn ("Monto total en intervalo: " ++ show montoTotal)
 
 eventosAFechaTupla :: [Evento] -> [(Evento, (Int, Int, Int))]
 eventosAFechaTupla eventos = [ (evento, parseFecha (formatearFecha (fecha evento))) | evento <- eventos ]
