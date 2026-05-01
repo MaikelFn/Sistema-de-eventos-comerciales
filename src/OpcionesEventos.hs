@@ -418,50 +418,66 @@ extraerDiaSemana evento =
   let (año, mes, dia) = parseFecha (formatearFecha (fecha evento))
   in diaDeSemana año mes dia
 
-sumarMes :: [Evento] -> Int -> Double
-sumarMes eventos mesBuscado =
+paresAñoMesUnicos :: [Evento] -> [(Int, Int)]
+paresAñoMesUnicos eventos =
+  nub
+    [ (extraerAño evento, extraerMes evento)
+    | evento <- eventos
+    ]
+
+sumarAñoMes :: [Evento] -> Int -> Int -> Double
+sumarAñoMes eventos añoBuscado mesBuscado =
   sum
     [ valor evento
     | evento <- eventos
+    , extraerAño evento == añoBuscado
     , extraerMes evento == mesBuscado
     ]
 
-montosPorMes :: [Evento] -> [(Int, Double)]
-montosPorMes eventos =
-  [ (mesActual, sumarMes eventos mesActual)
-  | mesActual <- [1..12]
+montosPorAñoMes :: [Evento] -> [(Int, Int, Double)]
+montosPorAñoMes eventos =
+  [ (añoActual, mesActual, sumarAñoMes eventos añoActual mesActual)
+  | (añoActual, mesActual) <- paresAñoMesUnicos eventos
   ]
 
-contarDiaSemana :: [Evento] -> Int -> Int
-contarDiaSemana eventos diaBuscado =
+paresAñoDiaSemanaUnicos :: [Evento] -> [(Int, Int)]
+paresAñoDiaSemanaUnicos eventos =
+  nub
+    [ (extraerAño evento, extraerDiaSemana evento)
+    | evento <- eventos
+    ]
+
+contarAñoDiaSemana :: [Evento] -> Int -> Int -> Int
+contarAñoDiaSemana eventos añoBuscado diaBuscado =
   length
     [ evento
     | evento <- eventos
+    , extraerAño evento == añoBuscado
     , extraerDiaSemana evento == diaBuscado
     ]
 
-conteosPorDiaSemana :: [Evento] -> [(Int, Int)]
-conteosPorDiaSemana eventos =
-  [ (diaActual, contarDiaSemana eventos diaActual)
-  | diaActual <- [0..6]
+conteosPorAñoDiaSemana :: [Evento] -> [(Int, Int, Int)]
+conteosPorAñoDiaSemana eventos =
+  [ (añoActual, diaActual, contarAñoDiaSemana eventos añoActual diaActual)
+  | (añoActual, diaActual) <- paresAñoDiaSemanaUnicos eventos
   ]
 
 mesMayorMonto :: [Evento] -> IO ()
 mesMayorMonto eventos = do
-  let montos          = montosPorMes eventos
-      montosOrdenados = sortOn snd montos
-      (mesMayor, montoMayor) = last montosOrdenados
+  let montos          = montosPorAñoMes eventos
+      montosOrdenados = sortOn (\(_,_,m) -> m) montos
+      (añoMayor, mesMayor, montoMayor) = last montosOrdenados
 
-      conteos          = conteosPorDiaSemana eventos
-      conteosOrdenados = sortOn snd conteos
-      (diaMayor, cantidadMayor) = last conteosOrdenados
+      conteos          = conteosPorAñoDiaSemana eventos
+      conteosOrdenados = sortOn (\(_,_,c) -> c) conteos
+      (añoDiaMayor, diaMayor, cantidadMayor) = last conteosOrdenados
 
   putStrLn "--- Mes con mayor monto total ---"
-  putStrLn ("Mes: " ++ show mesMayor)
+  putStrLn ("Año: " ++ show añoMayor ++ " | Mes: " ++ show mesMayor)
   putStrLn ("Monto acumulado: " ++ show montoMayor)
   putStrLn ""
   putStrLn "--- Dia de la semana mas activo ---"
-  putStrLn ("Dia: " ++ nombreDiaSemana diaMayor)
+  putStrLn ("Año: " ++ show añoDiaMayor ++ " | Dia: " ++ nombreDiaSemana diaMayor)
   putStrLn ("Cantidad de eventos: " ++ show cantidadMayor)
 eventoAntiguoReciente :: [Evento] -> IO ()
 eventoAntiguoReciente eventos = do
@@ -498,10 +514,32 @@ resumenPorIntervalo eventos = do
   putStrLn ("Cantidad de intervalos generados: " ++ show (length intervalos))
   mapM_ imprimirIntervaloAgrupado agrupados
 
+eventosDentroDeRango :: Integer -> Integer -> [Evento] -> [Evento]
+eventosDentroDeRango inicio fin eventos =
+  [ evento
+  | evento <- eventos
+  , fecha evento >= inicio
+  , fecha evento <= fin
+  ]
+
 opcionBusqueda :: [Evento] -> IO ()
 opcionBusqueda eventos = do
-  putStrLn "[Pendiente] Busqueda por rango de fechas"
-  putStrLn ("Eventos disponibles: " ++ show (length eventos))
+  putStrLn ""
+  putStrLn "--- Busqueda por rango de fechas ---"
+  putStrLn "Ingrese fecha de inicio (formato AAAAMMDD, ej: 20260101):"
+  putStr "> "
+  entradaInicio <- getLine
+  putStrLn "Ingrese fecha de fin (formato AAAAMMDD, ej: 20261231):"
+  putStr "> "
+  entradaFin <- getLine
+  let inicio    = read entradaInicio :: Integer
+      fin       = read entradaFin   :: Integer
+      resultado = eventosDentroDeRango inicio fin eventos
+  if inicio > fin
+    then putStrLn "Error: la fecha de inicio no puede ser mayor a la fecha de fin."
+    else do
+      putStrLn ("Eventos encontrados entre " ++ formatearFecha inicio ++ " y " ++ formatearFecha fin ++ ": " ++ show (length resultado))
+      mapM_ imprimirEvento resultado
 
 opcionEstadisticas :: [Evento] -> IO ()
 opcionEstadisticas eventos = do
