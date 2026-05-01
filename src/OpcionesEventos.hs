@@ -17,6 +17,7 @@ import System.Random (randomRIO)
 import Data.List (nub, sortOn)
 import Data.Time.Calendar (toGregorian, Day, addDays)
 import Data.Time.Clock (addUTCTime, getCurrentTime, utctDay)
+import Archivos (ResumenGeneral(..), exportarResumenCSV)
 
 añosAnalisis :: IO [Int]
 añosAnalisis = do
@@ -520,6 +521,7 @@ resumenGeneral eventos = do
   putStrLn "--- Resumen general ---"
   let conteos = cantidadEventosPorCategoria eventos
       (fechaMayorActividad, cantidadMayorActividad) = fechaConMasEventos eventos
+      (eventoMaximo, eventoMinimo) = eventoMaxMin eventos
   putStrLn "--- Cantidad de eventos por categoria ---"
   mapM_ imprimirCantidadEvento conteos
   imprimirMaxMinEventos eventos
@@ -529,12 +531,16 @@ resumenGeneral eventos = do
   putStrLn ""
   putStrLn "Exportar reporte:"
   putStrLn "1) CSV"
-  putStrLn "2) JSON"
-  putStrLn "3) No exportar"
+  putStrLn "2) No exportar"
   putStr "> "
   opcion <- getLine
   case opcion of
-    "1" -> putStrLn "[Pendiente] Exportar a CSV"
-    "2" -> putStrLn "[Pendiente] Exportar a JSON"
-    "3" -> return ()
+    "1" -> do
+      let resumen = ResumenGeneral 
+            conteos
+            (eventoId eventoMaximo, categoria eventoMaximo, valor eventoMaximo, formatearFecha (fecha eventoMaximo))
+            (eventoId eventoMinimo, categoria eventoMinimo, valor eventoMinimo, formatearFecha (fecha eventoMinimo))
+            (fechaMayorActividad, cantidadMayorActividad)
+      exportarResumenCSV "reporte_resumen.csv" resumen
+    "2" -> return ()
     _   -> putStrLn "Opcion invalida."
