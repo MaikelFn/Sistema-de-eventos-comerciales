@@ -9,6 +9,7 @@ import OpcionesEventos
   , opcionAnalisisTemporal
   , opcionBusqueda
   , opcionEstadisticas
+  , exportarEventosCSV
   )
 
 -- Menu principal recurrente
@@ -68,7 +69,9 @@ opcionElegida opcion eventos =
       opcionEstadisticas eventosActualizados
       return (True, eventosActualizados)
 
-    "6" -> return (False, eventos)
+    "6" -> do
+      exportarEventosCSV "eventos.csv" eventos
+      return (False, eventos)
 
     _ -> do
       putStrLn "Opcion invalida. Intente de nuevo."

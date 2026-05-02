@@ -11,6 +11,7 @@ module OpcionesEventos
   , opcionAnalisisTemporal
   , opcionBusqueda
   , opcionEstadisticas
+  , exportarEventosCSV
   ) where
 
 import System.Random (randomRIO)
@@ -585,3 +586,21 @@ resumenGeneral eventos = do
       exportarResumenCSV "reporte_resumen.csv" resumen
     "2" -> return ()
     _   -> putStrLn "Opcion invalida."
+
+-- Exportar lista de eventos a CSV
+exportarEventosCSV :: FilePath -> [Evento] -> IO ()
+exportarEventosCSV ruta eventos = do
+  let encabezado = "EventoId,Categoria,Valor,Fecha,EsAltoValor,ImpuestoAplicado"
+      filas = map eventoACSV eventos
+      contenido = encabezado ++ "\n" ++ unlines filas
+  writeFile ruta contenido
+  putStrLn ("Archivo exportado exitosamente: " ++ ruta)
+
+eventoACSV :: Evento -> String
+eventoACSV e =
+  show (eventoId e) ++ "," ++
+  categoria e ++ "," ++
+  show (valor e) ++ "," ++
+  formatearFecha (fecha e) ++ "," ++
+  show (esAltoValor e) ++ "," ++
+  show (impuestoAplicado e)
