@@ -1,2 +1,2 @@
-ghc -package time Main.hs -o sistema-eventos
+ghc -package time -package directory Main.hs -o sistema-eventos
 sistema-eventos.exe

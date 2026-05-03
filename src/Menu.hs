@@ -9,14 +9,21 @@ import OpcionesEventos
   , opcionAnalisisTemporal
   , opcionBusqueda
   , opcionEstadisticas
-  , exportarEventosCSV
+  , guardarTodosEventos
+  , cargarEventosIniciales
   )
 
--- Menu principal recurrente
--- Entrada: lista de eventos actuales en memoria
--- Salida: IO () — termina al elegir Salir
 menuPrincipal :: [Evento] -> IO ()
-menuPrincipal eventos = do
+menuPrincipal eventosPrevios = do
+  eventosArchivo <- cargarEventosIniciales
+  let eventosIniciales = eventosPrevios ++ eventosArchivo
+  if null eventosArchivo
+    then putStrLn "Sin eventos previos en archivo. Iniciando sesion nueva."
+    else putStrLn ("Eventos cargados del archivo: " ++ show (length eventosArchivo))
+  menu eventosIniciales
+
+menu :: [Evento] -> IO ()
+menu eventos = do
   putStrLn ""
   putStrLn "========================================="
   putStrLn " Sistema de Eventos Comerciales"
@@ -36,11 +43,11 @@ menuPrincipal eventos = do
   (continuar, eventosActualizados) <- opcionElegida opcion eventos
 
   if continuar
-    then menuPrincipal eventosActualizados
-    else putStrLn "Finalizando sistema..."
+    then menu eventosActualizados
+    else do
+      guardarTodosEventos eventosActualizados
+      putStrLn "Eventos guardados. Finalizando sistema..."
 
--- Ejecuta la opcion elegida
--- Retorna (continuar, lista actualizada)
 opcionElegida :: String -> [Evento] -> IO (Bool, [Evento])
 opcionElegida opcion eventos =
   case opcion of
@@ -69,9 +76,7 @@ opcionElegida opcion eventos =
       opcionEstadisticas eventosActualizados
       return (True, eventosActualizados)
 
-    "6" -> do
-      exportarEventosCSV "eventos.csv" eventos
-      return (False, eventos)
+    "6" -> return (False, eventos)
 
     _ -> do
       putStrLn "Opcion invalida. Intente de nuevo."

@@ -11,7 +11,8 @@ module OpcionesEventos
   , opcionAnalisisTemporal
   , opcionBusqueda
   , opcionEstadisticas
-  , exportarEventosCSV
+  , guardarTodosEventos
+  , cargarEventosIniciales
   ) where
 
 -- ============================================================
@@ -22,6 +23,7 @@ import System.Random (randomRIO)
 import Data.List (nub, sortOn)
 import Data.Time.Calendar (toGregorian, Day, addDays)
 import Data.Time.Clock (addUTCTime, getCurrentTime, utctDay)
+import System.Directory (doesFileExist)   -- <-- NUEVO
 import Archivos (ResumenGeneral(..), exportarResumenCSV)
 
 -- ============================================================
@@ -56,6 +58,9 @@ categorias =
 
 impuestoCompra :: Double
 impuestoCompra = 1.13
+
+archivoEventos :: FilePath
+archivoEventos = "eventos.csv"
 
 -- ============================================================
 -- FUNCIONES AUXILIARES: FECHAS
@@ -318,7 +323,6 @@ intervalosDeNDiasDesdeHoy n = do
       hoy  = utctDay ahora
       paso = max 1 n
   return (construirIntervalos paso fechaMaxima hoy)
-
 
 construirIntervalos :: Int -> Day -> Day -> [(Day, Day)]
 construirIntervalos pasoActual fechaMaxima inicio
@@ -609,16 +613,55 @@ resumenGeneral eventos = do
     _   -> putStrLn "Opcion invalida."
 
 -- ============================================================
--- EXPORTACIÓN CSV
+-- LECTURA DE EVENTOS DESDE ARCHIVO AL INICIAR
 -- ============================================================
 
-exportarEventosCSV :: FilePath -> [Evento] -> IO ()
-exportarEventosCSV ruta eventos = do
-  let encabezado = "EventoId,Categoria,Valor,Fecha,EsAltoValor,ImpuestoAplicado"
-      filas      = map eventoACSV eventos
-      contenido  = encabezado ++ "\n" ++ unlines filas
-  writeFile ruta contenido
-  putStrLn ("Archivo exportado exitosamente: " ++ ruta)
+dividirCSV :: String -> [String]
+dividirCSV "" = [""]
+dividirCSV (',':resto) = "" : dividirCSV resto
+dividirCSV (c:resto) =
+  let (primero:siguientes) = dividirCSV resto
+  in (c : primero) : siguientes
+
+parsearLineaEvento :: String -> Maybe (Int, String, Double, String, Bool, Bool)
+parsearLineaEvento linea =
+  case dividirCSV linea of
+    [idStr, cat, valStr, fec, altoStr, impStr] ->
+      Just (read idStr, cat, read valStr, fec, read altoStr, read impStr)
+    _ -> Nothing
+
+lineaAEvento :: (Int, String, Double, String, Bool, Bool) -> Evento
+lineaAEvento (eId, eCat, eVal, eFechaStr, eAlto, eImp) =
+  let (año, mes, dia) = parseFecha eFechaStr
+  in Evento
+      { eventoId         = eId
+      , categoria        = eCat
+      , valor            = eVal
+      , fecha            = fromIntegral año * 10000 + fromIntegral mes * 100 + fromIntegral dia
+      , esAltoValor      = eAlto
+      , impuestoAplicado = eImp
+      }
+
+lineasAEventos :: [String] -> [Evento]
+lineasAEventos lineas =
+  [ lineaAEvento tupla | linea <- lineas, Just tupla <- [parsearLineaEvento linea] ]
+
+cargarEventosIniciales :: IO [Evento]
+cargarEventosIniciales = do
+  existe <- doesFileExist archivoEventos
+  if not existe
+    then return []
+    else do
+      contenido <- readFile archivoEventos
+      let lineas = lines contenido
+          lineasDatos = case lineas of
+                          (h:t) | not (null h) && head h `notElem` "0123456789" -> t
+                          _ -> lineas
+      return (lineasAEventos lineasDatos)
+
+-- ============================================================
+-- GUARDAR EVENTOS AL SALIR
+-- ============================================================
 
 eventoACSV :: Evento -> String
 eventoACSV eventoActual =
@@ -628,3 +671,10 @@ eventoACSV eventoActual =
   formatearFecha (fecha eventoActual)   ++ "," ++
   show (esAltoValor eventoActual)       ++ "," ++
   show (impuestoAplicado eventoActual)
+
+guardarTodosEventos :: [Evento] -> IO ()
+guardarTodosEventos eventos = do
+  let encabezado = "EventoId,Categoria,Valor,Fecha,EsAltoValor,ImpuestoAplicado"
+      filas      = map eventoACSV eventos
+      contenido  = encabezado ++ "\n" ++ unlines filas
+  writeFile archivoEventos contenido
