@@ -13,6 +13,10 @@ import OpcionesEventos
   , cargarEventosIniciales
   )
 
+-- | Nombre: menuPrincipal
+-- Entrada: Lista de eventos previos en memoria.
+-- Funcionalidad o Salida: Carga eventos iniciales desde archivo,
+-- los combina con los recibidos y arranca el menu principal.
 menuPrincipal :: [Evento] -> IO ()
 menuPrincipal eventosPrevios = do
   eventosArchivo <- cargarEventosIniciales
@@ -22,6 +26,10 @@ menuPrincipal eventosPrevios = do
     else putStrLn ("Eventos cargados del archivo: " ++ show (length eventosArchivo))
   menu eventosIniciales
 
+-- | Nombre: menu
+-- Entrada: Lista actual de eventos del sistema.
+-- Funcionalidad o Salida: Muestra opciones en consola, procesa la opcion
+-- seleccionada y repite hasta que el usuario decida salir.
 menu :: [Evento] -> IO ()
 menu eventos = do
   putStrLn ""
@@ -48,6 +56,10 @@ menu eventos = do
       guardarTodosEventos eventosActualizados
       putStrLn "Eventos guardados. Finalizando sistema..."
 
+-- | Nombre: opcionElegida
+-- Entrada: Opcion ingresada por el usuario y lista de eventos actual.
+-- Funcionalidad o Salida: Ejecuta la accion correspondiente a la opcion
+-- y devuelve si el menu debe continuar junto con la lista actualizada.
 opcionElegida :: String -> [Evento] -> IO (Bool, [Evento])
 opcionElegida opcion eventos =
   case opcion of
@@ -82,6 +94,10 @@ opcionElegida opcion eventos =
       putStrLn "Opcion invalida. Intente de nuevo."
       return (True, eventos)
 
+-- | Nombre: actualizarEventosEnAcceso
+-- Entrada: Lista de eventos actual.
+-- Funcionalidad o Salida: Genera una cantidad aleatoria de nuevos eventos,
+-- evita IDs repetidos y retorna la lista ampliada.
 actualizarEventosEnAcceso :: [Evento] -> IO [Evento]
 actualizarEventosEnAcceso eventos = do
   cantidadNuevos <- generarCantidadEventos
