@@ -1,17 +1,17 @@
 Categoria,Cantidad de Eventos
-Visualizacion,41
-Apartado,67
-Compra,47
-Devolucion,47
-Seguimiento,53
+Visualizacion,20
+Apartado,32
+Compra,30
+Devolucion,27
+Seguimiento,25
 
 Evento con Monto Maximo
 ID,Categoria,Valor,Fecha
-5786496,Compra,84205.22250763628,2027-10-13
+3745992,Compra,81106.30920642699,2026-9-22
 
 Evento con Monto Minimo
 ID,Categoria,Valor,Fecha
-4159252,Visualizacion,650.88808064763,2028-3-2
+4860002,Devolucion,1526.0690585460293,2028-4-4
 
 Dia con Mayor Actividad,Cantidad de Eventos
-2028-1-4,4
+2027-6-7,3

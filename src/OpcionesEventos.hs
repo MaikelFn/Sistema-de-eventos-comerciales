@@ -364,33 +364,26 @@ montosPorAñoMes eventos =
   | (añoActual, mesActual) <- paresAñoMesUnicos eventos
   ]
 
--- | Nombre: paresAñoDiaSemanaUnicos
--- Entrada: Lista de eventos.
--- Funcionalidad o Salida: Obtiene pares unicos de (año, diaSemana).
-paresAñoDiaSemanaUnicos :: [Evento] -> [(Int, Int)]
-paresAñoDiaSemanaUnicos eventos =
-  nub [ (extraerAño eventoActual, extraerDiaSemana eventoActual) | eventoActual <- eventos ]
+-- | Nombre: sumarDiaSemana
+-- Entrada: Eventos y dia de semana objetivo (0-6).
+-- Funcionalidad o Salida: Suma los montos de todos los eventos de ese dia de la semana.
+sumarDiaSemana :: [Evento] -> Int -> Double
+sumarDiaSemana eventos diaBuscado =
+  sum [ valor e | e <- eventos, extraerDiaSemana e == diaBuscado ]
 
--- | Nombre: contarAñoDiaSemana
--- Entrada: Eventos, año y dia de semana objetivo.
--- Funcionalidad o Salida: Cuenta eventos para ese año y dia semanal.
-contarAñoDiaSemana :: [Evento] -> Int -> Int -> Int
-contarAñoDiaSemana eventos añoBuscado diaSemanaBuscado =
-  length
-    [ eventoActual
-    | eventoActual <- eventos
-    , extraerAño eventoActual == añoBuscado
-    , extraerDiaSemana eventoActual == diaSemanaBuscado
-    ]
+-- | Nombre: contarDiaSemana
+-- Entrada: Eventos y dia de semana objetivo (0-6).
+-- Funcionalidad o Salida: Cuenta todos los eventos que ocurrieron ese dia de la semana.
+contarDiaSemana :: [Evento] -> Int -> Int
+contarDiaSemana eventos diaBuscado =
+  length [ e | e <- eventos, extraerDiaSemana e == diaBuscado ]
 
--- | Nombre: conteosPorAñoDiaSemana
+-- | Nombre: conteosPorDiaSemana
 -- Entrada: Lista de eventos.
--- Funcionalidad o Salida: Devuelve conteos por año y dia de semana.
-conteosPorAñoDiaSemana :: [Evento] -> [(Int, Int, Int)]
-conteosPorAñoDiaSemana eventos =
-  [ (añoActual, diaSemanaActual, contarAñoDiaSemana eventos añoActual diaSemanaActual)
-  | (añoActual, diaSemanaActual) <- paresAñoDiaSemanaUnicos eventos
-  ]
+-- Funcionalidad o Salida: Devuelve (diaSemana, cantidad, monto) para los 7 dias.
+conteosPorDiaSemana :: [Evento] -> [(Int, Int, Double)]
+conteosPorDiaSemana eventos =
+  [ (dia, contarDiaSemana eventos dia, sumarDiaSemana eventos dia) | dia <- [0..6] ]
 
 -- | Nombre: eventosAFechaTupla
 -- Entrada: Lista de eventos.
@@ -704,15 +697,16 @@ opcionAnalisisTemporal eventos = do
 -- Funcionalidad o Salida: Imprime el mes con mayor monto y el dia semanal mas activo.
 mesMayorMonto :: [Evento] -> IO ()
 mesMayorMonto eventos = do
-  let (añoMayor, mesMayor, montoMayor) = last (sortOn (\(_, _, montoActual) -> montoActual) (montosPorAñoMes eventos))
-      (añoDia,  diaMayor, cantMayor)   = last (sortOn (\(_, _, cantidadActual) -> cantidadActual) (conteosPorAñoDiaSemana eventos))
+  let (añoMayor, mesMayor, montoMayor) = last (sortOn (\(_, _, m) -> m) (montosPorAñoMes eventos))
+      (diaMayor, cantMayor, montosDia) = last (sortOn (\(_, c, _) -> c) (conteosPorDiaSemana eventos))
   putStrLn "--- Mes con mayor monto total ---"
   putStrLn ("Año: " ++ show añoMayor ++ " | Mes: " ++ show mesMayor)
   putStrLn ("Monto acumulado: " ++ show montoMayor)
   putStrLn ""
   putStrLn "--- Dia de la semana mas activo ---"
-  putStrLn ("Año: " ++ show añoDia ++ " | Dia: " ++ nombreDiaSemana diaMayor)
+  putStrLn ("Dia: "                ++ nombreDiaSemana diaMayor)
   putStrLn ("Cantidad de eventos: " ++ show cantMayor)
+  putStrLn ("Monto total: "        ++ show montosDia)
 
 -- | Nombre: eventoAntiguoReciente
 -- Entrada: Lista de eventos.
